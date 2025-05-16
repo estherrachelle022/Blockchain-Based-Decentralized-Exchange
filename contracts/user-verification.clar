@@ -1,30 +1,40 @@
+;; User Verification Contract
+;; Validates trading participants
 
-;; title: user-verification
-;; version:
-;; summary:
-;; description:
+(define-data-var admin principal tx-sender)
 
-;; traits
-;;
+;; Map to store verified users
+(define-map verified-users principal bool)
 
-;; token definitions
-;;
+;; Error codes
+(define-constant err-not-admin (err u100))
+(define-constant err-already-verified (err u101))
+(define-constant err-not-verified (err u102))
 
-;; constants
-;;
+;; Check if caller is admin
+(define-private (is-admin)
+  (is-eq tx-sender (var-get admin)))
 
-;; data vars
-;;
+;; Verify a user
+(define-public (verify-user (user principal))
+  (begin
+    (asserts! (is-admin) err-not-admin)
+    (asserts! (is-none (map-get? verified-users user)) err-already-verified)
+    (ok (map-set verified-users user true))))
 
-;; data maps
-;;
+;; Revoke verification
+(define-public (revoke-verification (user principal))
+  (begin
+    (asserts! (is-admin) err-not-admin)
+    (asserts! (is-some (map-get? verified-users user)) err-not-verified)
+    (ok (map-delete verified-users user))))
 
-;; public functions
-;;
+;; Check if a user is verified
+(define-read-only (is-verified (user principal))
+  (default-to false (map-get? verified-users user)))
 
-;; read only functions
-;;
-
-;; private functions
-;;
-
+;; Transfer admin rights
+(define-public (set-admin (new-admin principal))
+  (begin
+    (asserts! (is-admin) err-not-admin)
+    (ok (var-set admin new-admin))))
